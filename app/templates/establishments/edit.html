@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Estabelecimento | pyFinanceManager{% endblock %}
+{% block page_title %}Editar Estabelecimento{% endblock %}
+
+{% block content %}
+<div class="glass-card" style="max-width: 600px; margin: 0 auto;">
+    <h3>Configurar: {{ estab.nome }}</h3>
+    <p style="color:#777; margin-bottom: 20px;">Se você renomear o estabelecimento (ex: veio com um nome confuso do banco), o nome antigo ficará salvo automaticamente como um sinônimo!</p>
+    
+    <form action="{{ url_for('establishments.edit', id=estab.id) }}" method="POST">
+        <div class="form-group">
+            <label>Nome do Estabelecimento</label>
+            <input type="text" name="nome" class="form-control" value="{{ estab.nome }}" required>
+        </div>
+        <div class="form-group">
+            <label>Categoria Padrão</label>
+            <select name="categoria_id" class="form-control">
+                <option value="">Nenhuma Categoria</option>
+                {% for cat in categorias %}
+                <option value="{{ cat.id }}" {% if estab.categoria_id == cat.id %}selected{% endif %}>
+                    {{ cat.nome }} {% if cat.parent %} ({{ cat.parent.nome }}){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+            <small style="color:#aaa;">Transações futuras herdarão essa categoria.</small>
+        </div>
+        <div class="form-group" style="display: flex; gap: 15px;">
+            <div style="flex: 1;">
+                <label>Estado (UF)</label>
+                <select name="estado" id="uf_select" class="form-control" data-saved="{{ estab.estado or '' }}">
+                    <option value="">Selecione...</option>
+                </select>
+            </div>
+            <div style="flex: 2;">
+                <label>Município</label>
+                <select name="municipio" id="municipio_select" class="form-control" data-saved="{{ estab.municipio or '' }}" disabled>
+                    <option value="">Selecione um estado...</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Adicionar Sinônimos (separados por vírgula)</label>
+            <input type="text" name="sinonimos" class="form-control" placeholder="Acrescentar sinônimos manuais...">
+        </div>
+        
+        <div class="form-group">
+            <label>Sinônimos Atuais Cadastrados:</label>
+            <div style="padding: 10px; background: rgba(0,0,0,0.05); border-radius: 8px;">
+                {% for sin in estab.sinonimos %}
+                <span class="badge" style="background:rgba(255,255,255,0.2); border:1px solid var(--glass-border); color:inherit; font-weight:normal; margin-bottom: 5px; display:inline-block;">
+                    {{ sin.nome_alternativo }}
+                </span>
+                {% else %}
+                <span style="color:#888;">Nenhum sinônimo.</span>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <hr style="border-top:1px solid rgba(255,255,255,0.1); margin: 30px 0;">
+        
+        <div class="form-group" style="padding: 15px; background: rgba(231, 76, 60, 0.1); border-left: 4px solid var(--danger-color); border-radius: 4px;">
+            <label style="color: var(--danger-color); font-weight: bold;"><i class="fa-solid fa-code-merge"></i> Fundir / Mover Transações (Avançado)</label>
+            <p style="font-size: 0.9rem; color: #888; margin-bottom: 10px;">
+                Se você preencher o campo abaixo, <strong>TODAS as transações e sinônimos deste estabelecimento serão movidos para o destino escolhido.</strong> Ao final, este estabelecimento `{{ estab.nome }}` será apagado do sistema.<br>
+            </p>
+            <select name="merge_to_id" class="form-control">
+                <option value="">Não mesclar (Apenas salvar alterações)</option>
+                {% for o_estab in outros_estabelecimentos %}
+                <option value="{{ o_estab.id }}">{{ o_estab.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div style="display:flex; gap:10px; margin-top:30px;">
+            <a href="{{ url_for('establishments.index') }}" class="btn" style="background: #ccc; color: #333; text-decoration: none; text-align:center; flex:1;">Cancelar</a>
+            <button type="submit" class="btn btn-primary" style="flex:2;"><i class="fa-solid fa-save"></i> Salvar Alterações</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ufSelect = document.getElementById('uf_select');
+    const citySelect = document.getElementById('municipio_select');
+    const savedUf = ufSelect.getAttribute('data-saved');
+    const savedCity = citySelect.getAttribute('data-saved');
+
+    // 1. Carregar Estados
+    fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome')
+        .then(res => res.json())
+        .then(states => {
+            states.forEach(state => {
+                const opt = document.createElement('option');
+                opt.value = state.sigla;
+                opt.textContent = state.nome;
+                if (state.sigla === savedUf) opt.selected = true;
+                ufSelect.appendChild(opt);
+            });
+
+            // Se ja tem UF salva, carregar as cidades dela
+            if (savedUf) {
+                loadCities(savedUf, savedCity);
+            }
+        });
+
+    // 2. Listener de Troca de Estado
+    ufSelect.addEventListener('change', function() {
+        const uf = this.value;
+        if (uf) {
+            loadCities(uf);
+        } else {
+            citySelect.innerHTML = '<option value="">Selecione um estado...</option>';
+            citySelect.disabled = true;
+        }
+    });
+
+    function loadCities(uf, selectCityValue = null) {
+        citySelect.disabled = false;
+        citySelect.innerHTML = '<option value="">Carregando...</option>';
+
+        fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`)
+            .then(res => res.json())
+            .then(cities => {
+                citySelect.innerHTML = '<option value="">Selecione o Município...</option>';
+                cities.forEach(city => {
+                    const opt = document.createElement('option');
+                    opt.value = city.nome;
+                    opt.textContent = city.nome;
+                    if (city.nome === selectCityValue) opt.selected = true;
+                    citySelect.appendChild(opt);
+                });
+            })
+            .catch(err => {
+                citySelect.innerHTML = '<option value="">Erro ao carregar</option>';
+            });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Estabelecimentos | pyFinanceManager{% endblock %}
+{% block page_title %}Gerenciamento de Estabelecimentos{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="glass-card" style="grid-column: 1 / -1;">
+        <h3>Novo Estabelecimento</h3>
+        <form action="{{ url_for('establishments.add') }}" method="POST">
+            <div class="form-group" style="display:flex; gap:15px; align-items:flex-end;">
+                <div style="flex:2;">
+                    <label>Nome do Estabelecimento</label>
+                    <input type="text" name="nome" class="form-control" required placeholder="Ex: Supermercado Extra">
+                </div>
+                <div style="flex:1;">
+                    <label>Categoria Padrão</label>
+                    <select name="categoria_id" class="form-control" required>
+                        <option value="">Selecione...</option>
+                        {% for cat in categorias %}
+                        <option value="{{ cat.id }}">{{ cat.nome }} {% if cat.parent %} ({{ cat.parent.nome }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group" style="display:flex; gap:15px; margin-top:15px;">
+                <div style="flex:1;">
+                    <label>Estado (UF)</label>
+                    <select name="estado" id="uf_select" class="form-control">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+                <div style="flex:2;">
+                    <label>Município</label>
+                    <select name="municipio" id="municipio_select" class="form-control" disabled>
+                        <option value="">Selecione um estado...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group" style="margin-top:15px;">
+                <label>Sinônimos de Identificação (separados por vírgula)</label>
+                <input type="text" name="sinonimos" class="form-control" placeholder="Ex: PGTO*EXTRA, EXTRA SUPER, EXTRA">
+                <small style="color:#aaa;">Esses sinônimos ajudarão a detectar o estabelecimento automaticamente na leitura de arquivos OFX.</small>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:15px;"><i class="fa-solid fa-store"></i> Cadastrar Estabelecimento</button>
+        </form>
+        
+        <h3 class="mt-4" style="margin-top: 30px;">Estabelecimentos Cadastrados</h3>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Localização</th>
+                        <th>Categoria Padrão</th>
+                        <th>Sinônimos Mapeados</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for est in estabelecimentos %}
+                    <tr>
+                        <td style="font-weight:bold;">{{ est.nome }}</td>
+                        <td style="font-size: 0.9rem; color: #aaa;">
+                            {% if est.municipio %}
+                            {{ est.municipio }} - {{ est.estado }}
+                            {% elif est.estado %}
+                            {{ est.estado }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if est.categoria %}
+                            <span class="badge" style="background: {{ est.categoria.cor }}55; color: {{ est.categoria.cor }}; padding: 4px 10px; border-radius: 12px;">
+                                <i class="{{ est.categoria.icone }}"></i> {{ est.categoria.nome }}
+                            </span>
+                            {% else %}
+                            <span style="color:#888;">Nenhuma</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% for sin in est.sinonimos %}
+                            <span class="badge" style="background:rgba(255,255,255,0.1); border:1px solid var(--glass-border); color:inherit; font-weight:normal; margin-bottom: 2px;">{{ sin.nome_alternativo }}</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('establishments.edit', id=est.id) }}" class="btn-icon" style="color:var(--primary-color);" title="Editar"><i class="fa-solid fa-pen-to-square"></i></a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4">Nenhum estabelecimento cadastrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ufSelect = document.getElementById('uf_select');
+    const citySelect = document.getElementById('municipio_select');
+
+    // 1. Carregar Estados
+    fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome')
+        .then(res => res.json())
+        .then(states => {
+            states.forEach(state => {
+                const opt = document.createElement('option');
+                opt.value = state.sigla;
+                opt.textContent = state.nome;
+                ufSelect.appendChild(opt);
+            });
+        });
+
+    // 2. Listener de Troca de Estado
+    ufSelect.addEventListener('change', function() {
+        const uf = this.value;
+        if (uf) {
+            citySelect.disabled = false;
+            citySelect.innerHTML = '<option value="">Carregando...</option>';
+
+            fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`)
+                .then(res => res.json())
+                .then(cities => {
+                    citySelect.innerHTML = '<option value="">Selecione o Município...</option>';
+                    cities.forEach(city => {
+                        const opt = document.createElement('option');
+                        opt.value = city.nome;
+                        opt.textContent = city.nome;
+                        citySelect.appendChild(opt);
+                    });
+                })
+                .catch(err => {
+                    citySelect.innerHTML = '<option value="">Erro ao carregar</option>';
+                });
+        } else {
+            citySelect.innerHTML = '<option value="">Selecione um estado...</option>';
+            citySelect.disabled = true;
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Faturas de Cartão | pyFinanceManager{% endblock %}
+{% block page_title %}Faturas de Cartão{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid" style="display: block;">
+    <!-- Navegação Temporal -->
+    <div class="glass-card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <a href="{{ url_for('transactions.faturas', periodo=prev_periodo) }}" class="btn" style="background: rgba(255,255,255,0.1); color: var(--text-color);"><i class="fa-solid fa-chevron-left"></i> Mês Anterior</a>
+        
+        <h2 style="margin: 0; padding: 0;">Fatura: <span style="color: var(--primary-color);">{{ periodo }}</span></h2>
+        
+        <a href="{{ url_for('transactions.faturas', periodo=next_periodo) }}" class="btn" style="background: rgba(255,255,255,0.1); color: var(--text-color);">Próximo Mês <i class="fa-solid fa-chevron-right"></i></a>
+    </div>
+
+    <!-- Container dos Cartões -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        {% for conta_id, cdata in contas_agrupadas.items() %}
+        <div class="glass-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; margin-bottom: 15px;">
+                <div>
+                    <h3 style="margin-bottom: 5px;">{{ cdata.conta.nome }}</h3>
+                    <span class="badge {% if cdata.conta.tipo == 'cartao' %}badge-danger{% else %}badge-success{% endif %}">{{ cdata.conta.tipo|capitalize }}</span>
+                </div>
+                <div style="text-align: right;">
+                    <small style="color: #aaa;">Total da Fatura ({{ periodo }})</small>
+                    <h2 class="{% if cdata.total >= 0 %}text-danger{% else %}text-success{% endif %}" style="margin: 0;">R$ {{ "%.2f"|format(cdata.total) }}</h2>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table" style="font-size: 0.95rem;">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrição / Estabelecimento</th>
+                            <th>Categoria</th>
+                            <th style="text-align: right;">Valor (R$)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in cdata.transacoes %}
+                        <tr>
+                            <td>{{ t.data.strftime('%d/%m/%Y') }}</td>
+                            <td>
+                                {{ t.descricao or '' }}
+                                {% if t.estabelecimento %}
+                                <div><small style="color:#aaa;"><i class="fa-solid fa-store"></i> {{ t.estabelecimento.nome }}</small></div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if t.categoria %}
+                                <span class="badge" style="background:{{ t.categoria.cor }}; color:#fff; font-size:0.8rem;">
+                                    <i class="{{ t.categoria.icone }}"></i> {{ t.categoria.nome }}
+                                </span>
+                                {% elif t.estabelecimento and t.estabelecimento.categoria %}
+                                <span class="badge" style="background:{{ t.estabelecimento.categoria.cor }}AA; color:#fff; font-size:0.8rem;" title="Herdada do Estabelecimento">
+                                    <i class="{{ t.estabelecimento.categoria.icone }}"></i> {{ t.estabelecimento.categoria.nome }}
+                                </span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right; vertical-align: middle;">
+                                <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+                                    {% for ax in t.anexos_multiplos %}
+                                    <a href="{{ url_for('transactions.download_anexo', id=ax.id) }}" class="btn-icon" style="color:var(--primary-color); font-size: 1.1rem;" title="Baixar {{ ax.filename }} ({{ ax.tipo_documento }})">
+                                        <i class="{{ ax.icone }}"></i>
+                                    </a>
+                                    {% endfor %}
+                                    <span style="font-weight: bold; margin-left: 10px; color: {% if t.tipo == 'despesa' %}var(--danger-color){% else %}var(--success-color){% endif %};">
+                                        {% if t.tipo == 'despesa' %}-{% else %}+{% endif %} {{ "%.2f"|format(t.valor) }}
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="glass-card" style="text-align: center; padding: 50px;">
+            <i class="fa-solid fa-file-invoice" style="font-size: 3rem; color: #555; margin-bottom: 20px;"></i>
+            <h3>Nenhuma Fatura Encontrada</h3>
+            <p style="color: #888;">Não há nenhuma transação associada à fatura <b>{{ periodo }}</b>.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

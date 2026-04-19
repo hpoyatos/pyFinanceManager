@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Upload OFX | pyFinanceManager{% endblock %}
+{% block page_title %}Conciliação OFX Bancária{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="glass-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <h3>Importar Arquivo OFX</h3>
+            <i class="fa-solid fa-file-invoice-dollar" style="font-size: 2rem; color: var(--primary-color); opacity: 0.8;"></i>
+        </div>
+        
+        <p style="margin-bottom: 20px; color: #777;">
+            Selecione a conta de destino e o arquivo `.ofx` exportado do seu banco. O sistema tentará conciliar automaticamente lançamentos existentes (com 5% de tolerância no valor) e categorizar com base nos sinônimos salvos. <b>Caso não encontre lançamentos compatíveis para conciliar, um novo lançamento será criado automaticamente.</b>
+        </p>
+
+        <form action="{{ url_for('ofx.upload') }}" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Conta de Destino / Origem</label>
+                <select name="conta_id" class="form-control" required>
+                    <option value="">Selecione a Conta...</option>
+                    {% for c in contas %}
+                    <option value="{{ c.id }}">{{ c.nome }} ({{ c.tipo|capitalize }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group" style="display: flex; gap: 15px;">
+                <div style="flex: 1;">
+                    <label>Arquivo OFX</label>
+                    <input type="file" name="ofx_file" class="form-control" accept=".ofx" required style="padding: 20px 15px; border: 2px dashed rgba(74, 144, 226, 0.5); cursor: pointer;">
+                </div>
+                <div style="flex: 1;">
+                    <label>Período da Fatura (Opcional - útil p/ Cartão)</label>
+                    <input type="month" name="fatura_periodo" class="form-control" style="padding: 20px 15px;">
+                    <small style="color:#aaa;">As transações carregarão a marcação da competência/fatura.</small>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 1.1rem; margin-top: 10px;">
+                <i class="fa-solid fa-upload"></i> Processar OFX
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

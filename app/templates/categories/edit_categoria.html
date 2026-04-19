@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Categoria | pyFinanceManager{% endblock %}
+{% block page_title %}Editar Categoria{% endblock %}
+
+{% block content %}
+<div class="glass-card" style="max-width: 600px; margin: 0 auto;">
+    <h3>Categoria: {{ cat.nome }}</h3>
+    
+    <form action="{{ url_for('categories.edit_categoria', id=cat.id) }}" method="POST">
+        <div class="form-group">
+            <label>Nome</label>
+            <input type="text" name="nome" class="form-control" value="{{ cat.nome }}" required>
+        </div>
+        <div class="form-group">
+            <label>Tipo</label>
+            <select name="tipo" class="form-control" required>
+                <option value="despesa" {% if cat.tipo == 'despesa' %}selected{% endif %}>Despesa</option>
+                <option value="receita" {% if cat.tipo == 'receita' %}selected{% endif %}>Receita</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Categoria Pai (Opcional)</label>
+            <select name="parent_id" class="form-control">
+                <option value="">Nenhuma Categoria</option>
+                {% for p_cat in categorias %}
+                <option value="{{ p_cat.id }}" {% if cat.parent_id == p_cat.id %}selected{% endif %}>
+                    {{ p_cat.nome }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group" style="display:flex; gap:10px;">
+            <div style="flex:1;">
+                <label>Cor (HEX)</label>
+                <input type="color" name="cor" class="form-control" style="padding:0; height:38px; width:100%; border:none;" value="{{ cat.cor }}">
+            </div>
+            <div style="flex:2;">
+                <label>Ícone</label>
+                <div class="form-control" style="display:flex; align-items:center; cursor:pointer;" onclick="openIconPicker(icon => { document.getElementById('editCatIcone').value = icon; document.getElementById('editCatIconeVis').className = icon; })">
+                    <i id="editCatIconeVis" class="{{ cat.icone }}" style="margin-right:10px; font-size:1.2rem; color:var(--primary-color);"></i>
+                    <span>Escolher Ícone...</span>
+                </div>
+                <input type="hidden" name="icone" id="editCatIcone" value="{{ cat.icone }}">
+            </div>
+        </div>
+        
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <a href="{{ url_for('categories.index') }}" class="btn" style="background: #ccc; color: #333; text-decoration: none; text-align:center; flex:1;">Cancelar</a>
+            <button type="submit" class="btn btn-primary" style="flex:2;"><i class="fa-solid fa-save"></i> Salvar Alterações</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

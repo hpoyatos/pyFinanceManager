@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}Lançamentos | pyFinanceManager{% endblock %}
+{% block page_title %}Lançamentos Financeiros{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    {% if not selected_conta %}
+    <!-- Seleção Inicial de Conta -->
+    <div class="glass-card" style="grid-column: 1 / -1; text-align: center; padding: 50px 20px;">
+        <i class="fa-solid fa-wallet" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 20px; opacity: 0.5;"></i>
+        <h2 style="margin-bottom: 10px;">Lançamentos Financeiros</h2>
+        <p style="color: #888; margin-bottom: 40px;">Selecione uma conta ou cartão para visualizar e gerenciar as transações.</p>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; max-width: 1000px; margin: 0 auto;">
+            {% for c in contas %}
+            <a href="{{ url_for('transactions.index', conta_id=c.id) }}" class="glass-card account-card" style="text-decoration: none; color: inherit; transition: transform 0.2s, border-color 0.2s; border: 1px solid var(--glass-border); padding: 25px;">
+                <i class="{% if c.tipo == 'cartao' %}fa-solid fa-credit-card{% else %}fa-solid fa-building-columns{% endif %}" style="font-size: 2rem; color: var(--primary-color); margin-bottom: 15px;"></i>
+                <h4 style="margin: 0;">{{ c.nome }}</h4>
+                <small style="text-transform: capitalize; color: #888;">{{ c.tipo }}</small>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <style>
+        .account-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-color) !important;
+            background: rgba(255,255,255,0.05);
+        }
+    </style>
+    
+    {% else %}
+    <!-- Breadcrumb / Header de Filtro -->
+    <div class="glass-card" style="grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 15px 25px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{{ url_for('transactions.index') }}" class="btn-icon" title="Voltar à Seleção"><i class="fa-solid fa-arrow-left"></i></a>
+            <h2 style="margin: 0; font-size: 1.4rem;">
+                <i class="{% if selected_conta.tipo == 'cartao' %}fa-solid fa-credit-card{% else %}fa-solid fa-building-columns{% endif %}" style="color: var(--primary-color); margin-right: 10px;"></i>
+                {{ selected_conta.nome }}
+            </h2>
+        </div>
+        <a href="{{ url_for('transactions.index') }}" class="btn" style="background: rgba(255,255,255,0.1); font-size: 0.85rem; color: var(--text-color); border: 1px solid var(--glass-border);"><i class="fa-solid fa-rotate"></i> Trocar Conta</a>
+    </div>
+
+    <!-- Formulário Rápido -->
+    <div class="glass-card" style="grid-column: 1 / -1;">
+        <h3>Novo Lançamento em {{ selected_conta.nome }}</h3>
+        <form action="{{ url_for('transactions.add') }}" method="POST" enctype="multipart/form-data" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+            <input type="hidden" name="conta_id" value="{{ selected_conta.id }}">
+            
+            <div class="form-group" style="flex: 1; min-width: 120px;">
+                <label>Tipo</label>
+                <select name="tipo" id="transaction_type_select" class="form-control" onchange="toggleTransferFields()" required>
+                    <option value="despesa">Despesa</option>
+                    <option value="receita">Receita</option>
+                    <option value="transferencia">Transferência</option>
+                </select>
+            </div>
+            <div class="form-group" id="conta_destino_grp" style="flex: 1; min-width: 150px; display: none;">
+                <label>Conta Destino</label>
+                <select name="conta_destino_id" class="form-control">
+                    <option value="">Selecione...</option>
+                    {% for c in contas if c.id != selected_conta.id %}
+                    <option value="{{ c.id }}">{{ c.nome }} ({{ c.tipo }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" style="flex: 1; min-width: 120px;">
+                <label>Data</label>
+                <input type="date" name="data" class="form-control" required>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 120px;">
+                <label>Valor (R$)</label>
+                <input type="number" step="0.01" name="valor" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Descrição</label>
+                <input type="text" name="descricao" class="form-control" placeholder="Ex: Almoço">
+            </div>
+            <div class="form-group">
+                <label>Observações</label>
+                <textarea name="observacoes" class="form-control" rows="2" placeholder="Notas adicionais..."></textarea>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 150px;">
+                <label>Estabelecimento</label>
+                <select name="estabelecimento_id" class="form-control">
+                    <option value="">Nenhum</option>
+                    {% for est in estabelecimentos %}
+                    <option value="{{ est.id }}">{{ est.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 150px;">
+                <label style="display:flex; justify-content:space-between;">Categoria (Secundária)
+                    <button type="button" onclick="quickAddCat()" style="background:none; border:none; color:var(--primary-color); cursor:pointer;"><i class="fa-solid fa-plus"></i></button>
+                </label>
+                <select name="categoria_id" id="cat_select" class="form-control">
+                    <option value="">Herdar do estab.</option>
+                    {% for cat in categorias %}
+                    <option value="{{ cat.id }}">{{ cat.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; gap: 5px;">
+                <input type="checkbox" name="is_previsao" id="previsao" value="1">
+                <label for="previsao" style="margin: 0; cursor: pointer;">Previsão</label>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 150px;">
+                <label>Competência/Fatura</label>
+                <input type="month" name="fatura_periodo" class="form-control" title="Opcional. Ex: Fatura de Dezembro">
+            </div>
+            <div class="form-group" style="flex: 2; min-width: 200px;">
+                <label>Anexo (PDF, Imagens)</label>
+                <input type="file" name="anexo" class="form-control">
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Adicionar</button>
+        </form>
+    </div>
+
+    <!-- Lista -->
+    <div class="glass-card" style="grid-column: 1 / -1;">
+        <h3>Últimos Lançamentos</h3>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Status</th>
+                        <th>Conta</th>
+                        <th>Descrição / Estabelecimento</th>
+                        <th>Categoria</th>
+                        <th>Valor</th>
+                        <th>Conciliado?</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transacoes_pagination.items %}
+                    <tr>
+                        <td>{{ t.data.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {% if t.is_previsao %}
+                            <span class="badge" style="background:#f39c12; color:#fff;">Previsão</span>
+                            {% else %}
+                            <span class="badge badge-success" style="background:#3498db; color:#fff;">Realizado</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ t.conta.nome }}</td>
+                        <td>
+                            {{ t.descricao or '' }} 
+                            {% if t.estabelecimento %}
+                            <div><small style="color:#aaa;"><i class="fa-solid fa-store"></i> {{ t.estabelecimento.nome }}</small></div>
+                            {% endif %}
+                            {% if t.observacoes %}
+                            <i class="fa-solid fa-note-sticky" style="color:var(--primary-color); cursor:help;" title="{{ t.observacoes }}"></i>
+                            {% endif %}
+                            {% if t.fatura_periodo %}
+                            <div><span class="badge" style="background:var(--primary-color); opacity:0.8; font-size:0.75rem; border:none; margin-top:3px;"><i class="fa-solid fa-calendar"></i> Fat: {{ t.fatura_periodo }}</span></div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if t.categoria %}
+                            <span class="badge" style="background:{{ t.categoria.cor }}; color:#fff; font-size:0.8rem;">
+                                <i class="{{ t.categoria.icone }}"></i> {{ t.categoria.nome }}
+                            </span>
+                            {% elif t.estabelecimento and t.estabelecimento.categoria %}
+                            <span class="badge" style="background:{{ t.estabelecimento.categoria.cor }}AA; color:#fff; font-size:0.8rem;" title="Herdada do Estabelecimento">
+                                <i class="{{ t.estabelecimento.categoria.icone }}"></i> {{ t.estabelecimento.categoria.nome }}
+                            </span>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td class="{% if t.tipo == 'despesa' %}text-danger{% else %}text-success{% endif %}" style="font-weight:bold;">
+                            {% if t.tipo == 'despesa' %}-{% else %}+{% endif %} R$ {{ "%.2f"|format(t.valor) }}
+                        </td>
+                        <td>
+                            {% if t.conciliado %}
+                            <a href="{{ url_for('transactions.conciliar_manual', id=t.id) }}" style="color:var(--success-color);" title="Desfazer">
+                                <i class="fa-solid fa-circle-check"></i> Sim
+                            </a>
+                            {% else %}
+                            <a href="{{ url_for('transactions.conciliar_manual', id=t.id) }}" style="color:#aaa;" title="Conciliar Manualmente">
+                                <i class="fa-regular fa-circle"></i> Não
+                            </a>
+                            {% endif %}
+                        </td>
+                        <td style="display: flex; gap: 10px;">
+                            {% for ax in t.anexos_multiplos %}
+                            <a href="{{ url_for('transactions.download_anexo', id=ax.id) }}" class="btn-icon" style="color:var(--primary-color);" title="Baixar {{ ax.filename }} ({{ ax.tipo_documento }})">
+                                <i class="{{ ax.icone }}"></i>
+                            </a>
+                            {% endfor %}
+                            <a href="{{ url_for('transactions.edit', id=t.id) }}" class="btn-icon" style="color:var(--primary-color);" title="Editar"><i class="fa-solid fa-pen-to-square"></i></a>
+                            <a href="{{ url_for('transactions.delete', id=t.id) }}" class="btn-icon" style="color:var(--danger-color);" onclick="return confirm('Excluir transação?')"><i class="fa-solid fa-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8">Nenhum lançamento encontrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Controles de Paginação -->
+        {% if transacoes_pagination.pages > 1 %}
+        <div style="display: flex; justify-content: center; gap: 10px; margin-top: 25px; align-items: center;">
+            <a href="{{ url_for('transactions.index', conta_id=selected_conta.id, page=transacoes_pagination.prev_num) }}" 
+               class="btn" style="background: rgba(255,255,255,0.05); color: var(--text-color); border: 1px solid var(--glass-border); padding: 5px 15px; {% if not transacoes_pagination.has_prev %}pointer-events: none; opacity: 0.5;{% endif %}">
+               <i class="fa-solid fa-chevron-left"></i> Anterior
+            </a>
+            
+            <span style="font-size: 0.9rem; color: #888;">Página <b>{{ transacoes_pagination.page }}</b> de {{ transacoes_pagination.pages }}</span>
+            
+            <a href="{{ url_for('transactions.index', conta_id=selected_conta.id, page=transacoes_pagination.next_num) }}" 
+               class="btn" style="background: rgba(255,255,255,0.05); color: var(--text-color); border: 1px solid var(--glass-border); padding: 5px 15px; {% if not transacoes_pagination.has_next %}pointer-events: none; opacity: 0.5;{% endif %}">
+                Próximo <i class="fa-solid fa-chevron-right"></i>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Criação Rápida de Categoria -->
+<dialog id="catModal" class="glass-card" style="border: 1px solid var(--glass-border); border-radius: 15px; padding: 20px; width: 400px; max-width: 90%; background: var(--glass-bg); backdrop-filter: blur(10px); color: var(--text-color);">
+    <h3 style="margin-top: 0;">Nova Categoria</h3>
+    <div class="form-group">
+        <label>Nome</label>
+        <input type="text" id="modalCatNome" class="form-control">
+    </div>
+    <div class="form-group" style="display:flex; gap:10px;">
+        <div style="flex:1;">
+            <label>Cor HEX</label>
+            <input type="color" id="modalCatCor" class="form-control" style="padding:0; height:38px; width:100%; border:none;" value="#feca57">
+        </div>
+        <div style="flex:2;">
+            <label>Ícone</label>
+            <div class="form-control" style="display:flex; align-items:center; cursor:pointer;" onclick="openIconPicker(icon => { document.getElementById('modalCatIcone').value = icon; document.getElementById('modalCatIconeVis').className = icon; })">
+                <i id="modalCatIconeVis" class="fa-solid fa-tag" style="margin-right:10px; font-size:1.2rem; color:var(--primary-color);"></i>
+                <span>Escolher Ícone...</span>
+            </div>
+            <input type="hidden" name="icone" id="modalCatIcone" value="fa-solid fa-tag">
+        </div>
+    </div>
+    <div style="display:flex; gap:10px; margin-top:20px;">
+        <button onclick="document.getElementById('catModal').close()" class="btn" style="background:#ccc; color:#333; flex:1;">Cancelar</button>
+        <button onclick="saveQuickCat()" class="btn btn-primary" style="flex:2;">Salvar</button>
+    </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleTransferFields() {
+    const topo = document.getElementById('transaction_type_select').value;
+    const destGrp = document.getElementById('conta_destino_grp');
+    if (topo === 'transferencia') {
+        destGrp.style.display = 'block';
+    } else {
+        destGrp.style.display = 'none';
+        destGrp.querySelector('select').value = '';
+    }
+}
+
+const modal = document.getElementById('catModal');
+
+function quickAddCat() {
+    document.getElementById('modalCatNome').value = '';
+    modal.showModal();
+}
+
+async function saveQuickCat() {
+    const nome = document.getElementById('modalCatNome').value;
+    const cor = document.getElementById('modalCatCor').value;
+    const icone = document.getElementById('modalCatIcone').value;
+    
+    if (!nome) return;
+    
+    const tipo = document.querySelector('select[name="tipo"]').value;
+    
+    // Ajax request
+    const response = await fetch("{{ url_for('transactions.quick_add_cat') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome: nome, tipo: tipo, cor: cor, icone: icone })
+    });
+    
+    const result = await response.json();
+    if (result.success) {
+        // add to combo
+        const combo = document.getElementById('cat_select');
+        const novaOption = document.createElement("option");
+        novaOption.value = result.id;
+        novaOption.text = result.nome; // Ideally we could put the icon here too, but standard select doesn't accept icons.
+        combo.add(novaOption);
+        combo.value = result.id;
+        
+        modal.close();
+    } else {
+        alert("Erro ao criar categoria.");
+    }
+}
+</script>
+{% endblock %}

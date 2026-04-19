@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | pyFinanceManager{% endblock %}
+{% block page_title %}Visão Geral{% endblock %}
+
+{% block content %}
+<div class="glass-card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 15px 25px;">
+    <a href="{{ url_for('main.index', periodo=prev_periodo) }}" class="btn-icon" style="font-size: 1.5rem;"><i class="fa-solid fa-chevron-left"></i></a>
+    <h2 style="margin: 0; font-size: 1.4rem; color: var(--primary-color);">Exibindo: {{ periodo_extenso }}</h2>
+    <a href="{{ url_for('main.index', periodo=next_periodo) }}" class="btn-icon" style="font-size: 1.5rem;"><i class="fa-solid fa-chevron-right"></i></a>
+</div>
+
+<div class="dashboard-grid">
+    <div class="glass-card stat-card">
+        <div class="stat-info">
+            <h4>Receitas ({{ periodo_extenso }})</h4>
+            <div class="value text-success">R$ <span id="val-receitas">{{ "%.2f"|format(receitas_mes) }}</span></div>
+        </div>
+        <div class="stat-icon text-success">
+            <i class="fa-solid fa-arrow-trend-up"></i>
+        </div>
+    </div>
+    <div class="glass-card stat-card">
+        <div class="stat-info">
+            <h4>Despesas ({{ periodo_extenso }})</h4>
+            <div class="value text-danger">R$ <span id="val-despesas">{{ "%.2f"|format(despesas_mes) }}</span></div>
+        </div>
+        <div class="stat-icon text-danger">
+            <i class="fa-solid fa-arrow-trend-down"></i>
+        </div>
+    </div>
+    <div class="glass-card stat-card">
+        <div class="stat-info">
+            <h4>Saldo Previsto</h4>
+            <div class="value">R$ <span id="val-saldo">{{ "%.2f"|format(saldo_previsto) }}</span></div>
+        </div>
+        <div class="stat-icon">
+            <i class="fa-solid fa-scale-balanced"></i>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+    <div class="glass-card">
+        <h3>Despesas por Categoria</h3>
+        <canvas id="categoryChart"></canvas>
+    </div>
+    <div class="glass-card">
+        <h3>Orçamento vs Realizado</h3>
+        <canvas id="budgetChart"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Dynamic values from backend
+    const rawLabels = {{ cat_labels | tojson | safe }};
+    const rawData = {{ cat_values | tojson | safe }};
+    const rawColors = {{ cat_colors | tojson | safe }};
+    
+    // Config Category Chart
+    const ctxCategory = document.getElementById('categoryChart').getContext('2d');
+    new Chart(ctxCategory, {
+        type: 'doughnut',
+        data: {
+            labels: rawLabels.length > 0 ? rawLabels : ['Sem dados'],
+            datasets: [{
+                data: rawData.length > 0 ? rawData : [1],
+                backgroundColor: rawColors.length > 0 ? rawColors : ['rgba(255,255,255,0.1)'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'right', labels: { color: 'inherit' } },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            if(rawData.length === 0) return ' Sem dados';
+                            let val = context.raw;
+                            let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            let percent = ((val / total) * 100).toFixed(1);
+                            let formattedStr = val.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                            return ' R$ ' + formattedStr + ' (' + percent + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Config Budget Chart
+    const orcado = {{ "%.2f"|format(total_orcado) }};
+    const realizado = {{ "%.2f"|format(total_realizado) }};
+    
+    const ctxBudget = document.getElementById('budgetChart').getContext('2d');
+    new Chart(ctxBudget, {
+        type: 'bar',
+        data: {
+            labels: ['{{ periodo_extenso }}'],
+            datasets: [
+                {
+                    label: 'Orçado',
+                    data: [orcado],
+                    backgroundColor: 'rgba(74, 144, 226, 0.5)'
+                },
+                {
+                    label: 'Realizado',
+                    data: [realizado],
+                    backgroundColor: 'rgba(255, 107, 107, 0.8)'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true, grid: { color: 'rgba(200,200,200,0.1)' }, ticks: { color: 'inherit' } },
+                x: { grid: { display: false }, ticks: { color: 'inherit' } }
+            },
+            plugins: {
+                legend: { labels: { color: 'inherit' } }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

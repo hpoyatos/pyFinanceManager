@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Categorias | pyFinanceManager{% endblock %}
+{% block page_title %}Categorias e Estabelecimentos{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+    <!-- Lista de Categorias -->
+    <div class="glass-card">
+        <h3>Nova Categoria</h3>
+        <form action="{{ url_for('categories.add_categoria') }}" method="POST">
+            <div class="form-group">
+                <label>Nome</label>
+                <input type="text" name="nome" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Tipo</label>
+                <select name="tipo" class="form-control" required>
+                    <option value="despesa">Despesa</option>
+                    <option value="receita">Receita</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Categoria Pai (Opcional)</label>
+                <select name="parent_id" class="form-control">
+                    <option value="">Nenhuma</option>
+                    {% for cat in categorias %}
+                        {% if not cat.parent_id %}
+                        <option value="{{ cat.id }}">{{ cat.nome }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label>Cor (HEX)</label>
+                    <input type="color" name="cor" class="form-control" style="padding:0; height:38px; width:100%; border:none;" value="#48dbfb">
+                </div>
+                <div style="flex:2;">
+                    <label>Ícone</label>
+                    <div class="form-control" style="display:flex; align-items:center; cursor:pointer;" onclick="openIconPicker(icon => { document.getElementById('novaCatIcone').value = icon; document.getElementById('novaCatIconeVis').className = icon; })">
+                        <i id="novaCatIconeVis" class="fa-solid fa-tag" style="margin-right:10px; font-size:1.2rem; color:var(--primary-color);"></i>
+                        <span>Escolher Ícone...</span>
+                    </div>
+                    <input type="hidden" name="icone" id="novaCatIcone" value="fa-solid fa-tag">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%"><i class="fa-solid fa-plus"></i> Salvar Categoria</button>
+        </form>
+
+        <h3 class="mt-4" style="margin-top: 30px;">Estrutura de Categorias</h3>
+        <div class="table-responsive">
+            <table class="table">
+                <tbody>
+                    {% for p_cat in categorias %}
+                        {% if not p_cat.parent_id %}
+                        <tr>
+                            <td>
+                                <strong><i class="{{ p_cat.icone }}" style="color:{{ p_cat.cor }};"></i> {{ p_cat.nome }}</strong>
+                                <span class="badge {% if p_cat.tipo == 'receita' %}badge-success{% else %}badge-danger{% endif %}">{{ p_cat.tipo|capitalize }}</span>
+                                <a href="{{ url_for('categories.edit_categoria', id=p_cat.id) }}" style="float:right; color:var(--primary-color);" title="Editar"><i class="fa-solid fa-pen-to-square"></i></a>
+                            </td>
+                        </tr>
+                            {% for sub in p_cat.subcategorias %}
+                            <tr>
+                                <td style="padding-left: 40px;">
+                                    ↳ <i class="{{ sub.icone }}" style="color:{{ sub.cor }};"></i> {{ sub.nome }}
+                                    <a href="{{ url_for('categories.edit_categoria', id=sub.id) }}" style="float:right; color:var(--primary-color);" title="Editar"><i class="fa-solid fa-pen-to-square"></i></a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}pyFinanceManager{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <h2><i class="fa-solid fa-wallet"></i> <span>pyFinance</span></h2>
+                <button class="btn-icon" onclick="document.querySelector('.sidebar').classList.toggle('collapsed')" title="Toggle Menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="{{ url_for('main.index') }}" class="active"><i class="fa-solid fa-chart-pie"></i> <span>Dashboard</span></a></li>
+                    <li><a href="{{ url_for('accounts.index') }}"><i class="fa-solid fa-building-columns"></i> <span>Contas</span></a></li>
+                    <li><a href="{{ url_for('transactions.index') }}"><i class="fa-solid fa-money-bill-transfer"></i> <span>Lançamentos</span></a></li>
+                    <li><a href="{{ url_for('transactions.faturas') }}"><i class="fa-solid fa-credit-card"></i> <span>Faturas de Cartão</span></a></li>
+                    <li><a href="{{ url_for('ofx.index') }}"><i class="fa-solid fa-file-import"></i> <span>Conciliação OFX</span></a></li>
+                    <li><a href="{{ url_for('categories.index') }}"><i class="fa-solid fa-layer-group"></i> <span>Categorias</span></a></li>
+                    <li><a href="{{ url_for('establishments.index') }}"><i class="fa-solid fa-store"></i> <span>Estabelecimentos</span></a></li>
+                    <li><a href="{{ url_for('budget.index') }}"><i class="fa-solid fa-bullseye"></i> <span>Orçamento</span></a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="theme-toggle" class="btn-icon"><i class="fa-solid fa-moon"></i></button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                <!-- We could add user info or date here -->
+                <div class="topbar-actions">
+                    <span class="current-date" id="current-date"></span>
+                </div>
+            </header>
+            
+            <div class="content-area">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    <div class="flash-messages">
+                      {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                {% endwith %}
+                
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+    <!-- Icon Picker Global Modal -->
+    <dialog id="globalIconPickerModal" class="glass-card" style="border: 1px solid var(--glass-border); border-radius: 15px; padding: 20px; width: 600px; max-width: 90%; max-height:80vh; overflow-y:auto; background: var(--glass-bg); backdrop-filter: blur(10px); color: var(--text-color);">
+        <h3 style="margin-top: 0;">Selecione um Ícone</h3>
+        <div id="iconPickerGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(45px, 1fr)); gap:10px; margin-bottom: 20px;">
+            <!-- Rendered via JS -->
+        </div>
+        <div style="text-align: right;">
+            <button onclick="document.getElementById('globalIconPickerModal').close()" class="btn" style="background:#ccc; color:#333;">Cancelar</button>
+        </div>
+    </dialog>
+    
+    <script>
+    const FA_ICONS = [
+      'fa-solid fa-money-bill', 'fa-solid fa-credit-card', 'fa-solid fa-piggy-bank', 'fa-solid fa-sack-dollar', 'fa-solid fa-wallet', 'fa-solid fa-coins', 'fa-solid fa-building-columns', 'fa-solid fa-chart-line', 'fa-solid fa-receipt', 'fa-solid fa-file-invoice-dollar',
+      'fa-solid fa-cart-shopping', 'fa-solid fa-basket-shopping', 'fa-solid fa-store', 'fa-solid fa-shop', 'fa-solid fa-bag-shopping', 'fa-solid fa-gifts',
+      'fa-solid fa-car', 'fa-solid fa-gas-pump', 'fa-solid fa-bus', 'fa-solid fa-train', 'fa-solid fa-motorcycle', 'fa-solid fa-plane', 'fa-solid fa-taxi', 'fa-solid fa-wrench', 'fa-solid fa-oil-can',
+      'fa-solid fa-utensils', 'fa-solid fa-burger', 'fa-solid fa-pizza-slice', 'fa-solid fa-mug-hot', 'fa-solid fa-martini-glass', 'fa-solid fa-wine-glass', 'fa-solid fa-bowl-food', 'fa-solid fa-apple-whole',
+      'fa-solid fa-house', 'fa-solid fa-bolt', 'fa-solid fa-droplet', 'fa-solid fa-wifi', 'fa-solid fa-fire', 'fa-solid fa-broom', 'fa-solid fa-couch', 'fa-solid fa-bed',
+      'fa-solid fa-heart-pulse', 'fa-solid fa-pills', 'fa-solid fa-tooth', 'fa-solid fa-stethoscope', 'fa-solid fa-hospital', 'fa-solid fa-dumbbell',
+      'fa-solid fa-graduation-cap', 'fa-solid fa-book', 'fa-solid fa-pen', 'fa-solid fa-laptop', 'fa-solid fa-mobile-screen', 'fa-solid fa-tv',
+      'fa-solid fa-gamepad', 'fa-solid fa-music', 'fa-solid fa-film', 'fa-solid fa-ticket', 'fa-solid fa-plane-departure', 'fa-solid fa-umbrella-beach', 'fa-solid fa-paw', 'fa-solid fa-child',
+      'fa-solid fa-scissors', 'fa-solid fa-shirt', 'fa-solid fa-gem', 'fa-solid fa-baby',
+      'fa-solid fa-tag', 'fa-solid fa-tags', 'fa-solid fa-bookmark', 'fa-solid fa-star', 'fa-solid fa-circle-info'
+    ];
+    let iconPickerCallback = null;
+    
+    function openIconPicker(callback) {
+        iconPickerCallback = callback;
+        const grid = document.getElementById('iconPickerGrid');
+        if (grid.children.length === 0) {
+            let html = '';
+            FA_ICONS.forEach(icon => {
+                html += `<button type="button" onclick="selectIcon('${icon}')" style="background:rgba(255,255,255,0.1); border:1px solid var(--glass-border); border-radius:5px; padding:10px; color:var(--text-color); cursor:pointer; font-size:1.2rem; transition: background 0.2s;" onmouseover="this.style.background='var(--primary-color)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+                    <i class="${icon}"></i>
+                </button>`;
+            });
+            grid.innerHTML = html;
+        }
+        document.getElementById('globalIconPickerModal').showModal();
+    }
+    
+    function selectIcon(icon) {
+        if (iconPickerCallback) iconPickerCallback(icon);
+        document.getElementById('globalIconPickerModal').close();
+    }
+    </script>
+</body>
+</html>

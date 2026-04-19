@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Lançamento | pyFinanceManager{% endblock %}
+{% block page_title %}Editar Lançamento{% endblock %}
+
+{% block content %}
+<div class="glass-card" style="max-width: 600px; margin: 0 auto;">
+    <form action="{{ url_for('transactions.edit', id=t.id) }}" method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label>Conta</label>
+            <select name="conta_id" class="form-control" required>
+                {% for c in contas %}
+                <option value="{{ c.id }}" {% if c.id == t.conta_id %}selected{% endif %}>{{ c.nome }} ({{ c.tipo }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="display:flex; gap:15px;">
+            <div style="flex:1;">
+                <select name="tipo" id="t_tipo" class="form-control" required>
+                    <option value="despesa" {% if t.tipo == 'despesa' %}selected{% endif %}>Despesa</option>
+                    <option value="receita" {% if t.tipo == 'receita' %}selected{% endif %}>Receita</option>
+                    <option value="transferencia_saida" {% if t.tipo == 'transferencia_saida' %}selected{% endif %}>Transferência (Saída)</option>
+                    <option value="transferencia_entrada" {% if t.tipo == 'transferencia_entrada' %}selected{% endif %}>Transferência (Entrada)</option>
+                </select>
+            </div>
+            <div style="flex:1;">
+                <label>Data</label>
+                <input type="date" name="data" class="form-control" value="{{ t.data.strftime('%Y-%m-%d') }}" required>
+            </div>
+            <div style="flex:1;">
+                <label>Valor (R$)</label>
+                <input type="number" step="0.01" name="valor" class="form-control" value="{{ t.valor }}" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Descrição Curta</label>
+            <input type="text" name="descricao" class="form-control" value="{{ t.descricao or '' }}">
+        </div>
+        <div class="form-group">
+            <label>Observações Detalhadas</label>
+            <textarea name="observacoes" class="form-control" rows="4" placeholder="Detalhes da compra, lista de itens, etc...">{{ t.observacoes or '' }}</textarea>
+        </div>
+        <div class="form-group" style="display:flex; gap:15px;">
+            <div style="flex:1;">
+                <label>Estabelecimento</label>
+                <select name="estabelecimento_id" class="form-control">
+                    <option value="">Nenhum</option>
+                    {% for est in estabelecimentos %}
+                    <option value="{{ est.id }}" {% if est.id == t.estabelecimento_id %}selected{% endif %}>{{ est.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="flex:1;">
+                <label style="display:flex; justify-content:space-between;">Categoria 
+                    <button type="button" onclick="quickAddCat()" style="background:none; border:none; color:var(--primary-color); cursor:pointer;"><i class="fa-solid fa-plus"></i> Criar Nova</button>
+                </label>
+                <select name="categoria_id" id="cat_select" class="form-control">
+                    <option value="">Herdar do estab.</option>
+                    {% for cat in categorias %}
+                    <option value="{{ cat.id }}" {% if cat.id == t.categoria_id %}selected{% endif %}>{{ cat.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-group" style="display:flex; gap:15px; align-items:center;">
+            <div style="flex:1;">
+                <input type="checkbox" name="is_previsao" id="previsao" value="1" {% if t.is_previsao %}checked{% endif %}>
+                <label for="previsao" style="margin: 0; cursor: pointer;">Previsão</label>
+            </div>
+            <div style="flex:2;">
+                <label>Competência/Fatura Mensal</label>
+                <input type="month" name="fatura_periodo" class="form-control" value="{{ t.fatura_periodo or '' }}" title="Opcional. Ex: Fatura de Dezembro">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Gerenciar Anexos</label>
+            <div style="margin-bottom: 15px;">
+                {% for ax in t.anexos_multiplos %}
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 5px;">
+                    <div>
+                        <i class="{{ ax.icone }}" style="margin-right: 10px; color: var(--primary-color);"></i>
+                        <span style="font-size: 0.9rem;">{{ ax.filename }}</span>
+                        <small style="display: block; color: #888;">{{ ax.tipo_documento }}</small>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="{{ url_for('transactions.download_anexo', id=ax.id) }}" class="btn-icon" style="color: var(--primary-color);" title="Download"><i class="fa-solid fa-download"></i></a>
+                        <a href="{{ url_for('transactions.delete_anexo', id=ax.id) }}" class="btn-icon" style="color: var(--danger-color);" onclick="return confirm('Excluir este anexo?')" title="Excluir"><i class="fa-solid fa-trash-can"></i></a>
+                    </div>
+                </div>
+                {% else %}
+                <p style="color: #666; font-size: 0.9rem;">Nenhum anexo encontrado.</p>
+                {% endfor %}
+            </div>
+            
+            <label>Adicionar Novos Documentos (Múltiplos)</label>
+            <input type="file" name="anexos" class="form-control" multiple>
+        </div>
+        
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <a href="{{ url_for('transactions.index') }}" class="btn" style="background: #ccc; color: #333; text-decoration: none; text-align:center; flex:1;">Cancelar</a>
+            <button type="submit" class="btn btn-primary" style="flex:2;"><i class="fa-solid fa-save"></i> Salvar</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function quickAddCat() {
+    const nome = prompt("Nome da nova Categoria:");
+    if (!nome) return;
+    const tipo = document.getElementById('t_tipo').value;
+    
+    // Ajax request
+    const response = await fetch("{{ url_for('transactions.quick_add_cat') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome: nome, tipo: tipo })
+    });
+    
+    const result = await response.json();
+    if (result.success) {
+        // add to combo
+        const combo = document.getElementById('cat_select');
+        const novaOption = document.createElement("option");
+        novaOption.value = result.id;
+        novaOption.text = result.nome;
+        combo.add(novaOption);
+        combo.value = result.id;
+        alert("Categoria " + result.nome + " criada e selecionada com sucesso!");
+    } else {
+        alert("Erro ao criar categoria.");
+    }
+}
+</script>
+{% endblock %}

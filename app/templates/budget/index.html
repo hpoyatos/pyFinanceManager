@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Orçamento | pyFinanceManager{% endblock %}
+{% block page_title %}Orçamentos e Metas ({{ mes }}/{{ ano }}){% endblock %}
+
+{% block content %}
+<div class="dashboard-grid" style="grid-template-columns: 1fr 2fr;">
+    <div class="glass-card">
+        <h3>Definir Orçamento Mensal</h3>
+        <form action="{{ url_for('budget.add') }}" method="POST">
+            <input type="hidden" name="ano" value="{{ ano }}">
+            <input type="hidden" name="mes" value="{{ mes }}">
+            
+            <div class="form-group">
+                <label>Categoria de Despesa</label>
+                <select name="categoria_id" class="form-control" required>
+                    <option value="">Selecione...</option>
+                    {% for cat in categorias %}
+                        {% if cat.tipo == 'despesa' %}
+                        <option value="{{ cat.id }}">{{ cat.nome }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Valor Orçado (Meta Máxima R$)</label>
+                <input type="number" step="0.01" name="valor_previsto" class="form-control" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fa-solid fa-bullseye"></i> Salvar Meta</button>
+        </form>
+    </div>
+
+    <div class="glass-card">
+        <h3>Orçamentos Vigentes neste Mês</h3>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Categoria</th>
+                        <th>Valor Orçado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in orcamentos %}
+                    <tr>
+                        <td>{{ o.categoria.nome }}</td>
+                        <td>R$ {{ "%.2f"|format(o.valor_previsto) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="2">Nenhum orçamento definido para este mês.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
