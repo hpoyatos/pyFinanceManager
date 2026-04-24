@@ -25,7 +25,7 @@
                 </div>
                 <div style="text-align: right;">
                     <small style="color: #aaa;">Total da Fatura ({{ periodo }})</small>
-                    <h2 class="{% if cdata.total >= 0 %}text-danger{% else %}text-success{% endif %}" style="margin: 0;">R$ {{ "%.2f"|format(cdata.total) }}</h2>
+                    <h2 class="{% if cdata.total >= 0 %}text-danger{% else %}text-success{% endif %}" style="margin: 0;">{{ cdata.total | currency }}</h2>
                 </div>
             </div>
 
@@ -44,9 +44,12 @@
                         <tr>
                             <td>{{ t.data.strftime('%d/%m/%Y') }}</td>
                             <td>
-                                {{ t.descricao or '' }}
+                                <div style="font-weight:bold;">{{ t.descricao or (t.estabelecimento.nome if t.estabelecimento else 'S/ Descrição') }}</div>
                                 {% if t.estabelecimento %}
-                                <div><small style="color:#aaa;"><i class="fa-solid fa-store"></i> {{ t.estabelecimento.nome }}</small></div>
+                                <div style="margin-top: 2px;"><small style="color:#aaa;"><i class="fa-solid fa-store"></i> {{ t.estabelecimento.nome }}</small></div>
+                                {% endif %}
+                                {% if t.parcela %}
+                                <span class="badge" style="background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); font-size: 0.75rem; vertical-align: middle;">{{ t.parcela }}</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -69,8 +72,8 @@
                                         <i class="{{ ax.icone }}"></i>
                                     </a>
                                     {% endfor %}
-                                    <span style="font-weight: bold; margin-left: 10px; color: {% if t.tipo == 'despesa' %}var(--danger-color){% else %}var(--success-color){% endif %};">
-                                        {% if t.tipo == 'despesa' %}-{% else %}+{% endif %} {{ "%.2f"|format(t.valor) }}
+                                    <span class="{% if t.tipo == 'despesa' or t.tipo == 'transferencia_saida' %}text-danger{% else %}text-success{% endif %}" style="font-weight: bold; margin-left: 10px;">
+                                        {% if t.tipo == 'despesa' or t.tipo == 'transferencia_saida' %}- {% endif %}{{ t.valor | currency }}
                                     </span>
                                 </div>
                             </td>

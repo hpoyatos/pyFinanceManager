@@ -14,7 +14,7 @@
     <div class="glass-card stat-card">
         <div class="stat-info">
             <h4>Receitas ({{ periodo_extenso }})</h4>
-            <div class="value text-success">R$ <span id="val-receitas">{{ "%.2f"|format(receitas_mes) }}</span></div>
+            <div class="value text-success">{{ receitas_mes | currency }}</div>
         </div>
         <div class="stat-icon text-success">
             <i class="fa-solid fa-arrow-trend-up"></i>
@@ -23,18 +23,24 @@
     <div class="glass-card stat-card">
         <div class="stat-info">
             <h4>Despesas ({{ periodo_extenso }})</h4>
-            <div class="value text-danger">R$ <span id="val-despesas">{{ "%.2f"|format(despesas_mes) }}</span></div>
+            <div class="value text-danger">{{ despesas_mes | currency }}</div>
         </div>
         <div class="stat-icon text-danger">
             <i class="fa-solid fa-arrow-trend-down"></i>
         </div>
     </div>
+    
+    {% set balanco = receitas_mes - despesas_mes %}
     <div class="glass-card stat-card">
         <div class="stat-info">
-            <h4>Saldo Previsto</h4>
-            <div class="value">R$ <span id="val-saldo">{{ "%.2f"|format(saldo_previsto) }}</span></div>
+            <h4 style="color: {% if balanco >= 0 %}#3498db{% else %}#e74c3c{% endif %};">
+                {% if balanco >= 0 %}Superávit{% else %}Déficit{% endif %} Mensal
+            </h4>
+            <div class="value" style="color: {% if balanco >= 0 %}#3498db{% else %}#e74c3c{% endif %};">
+                {{ balanco | currency }}
+            </div>
         </div>
-        <div class="stat-icon">
+        <div class="stat-icon" style="color: {% if balanco >= 0 %}#3498db{% else %}#e74c3c{% endif %};">
             <i class="fa-solid fa-scale-balanced"></i>
         </div>
     </div>
@@ -59,6 +65,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const rawLabels = {{ cat_labels | tojson | safe }};
     const rawData = {{ cat_values | tojson | safe }};
     const rawColors = {{ cat_colors | tojson | safe }};
+    const rawIds = {{ cat_ids | tojson | safe }};
+    const currentPeriod = '{{ periodo }}';
     
     // Config Category Chart
     const ctxCategory = document.getElementById('categoryChart').getContext('2d');
@@ -74,6 +82,13 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         options: {
             responsive: true,
+            onClick: (evt, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const catId = rawIds[index];
+                    window.location.href = `/categories/${catId}/transactions/${currentPeriod}`;
+                }
+            },
             plugins: {
                 legend: { position: 'right', labels: { color: 'inherit' } },
                 tooltip: {
@@ -82,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if(rawData.length === 0) return ' Sem dados';
                             let val = context.raw;
                             let total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            let percent = ((val / total) * 100).toFixed(1);
+                            let percent = ((val / total) * 100).toFixed(1).replace('.', ',');
                             let formattedStr = val.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
                             return ' R$ ' + formattedStr + ' (' + percent + '%)';
                         }
@@ -93,8 +108,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Config Budget Chart
-    const orcado = {{ "%.2f"|format(total_orcado) }};
-    const realizado = {{ "%.2f"|format(total_realizado) }};
+    const orcado = {{ total_orcado }};
+    const realizado = {{ total_realizado }};
     
     const ctxBudget = document.getElementById('budgetChart').getContext('2d');
     new Chart(ctxBudget, {

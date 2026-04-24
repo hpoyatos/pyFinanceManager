@@ -85,6 +85,7 @@
                             {% endfor %}
                         </td>
                         <td>
+                            <a href="{{ url_for('establishments.transactions_detail', id=est.id) }}" class="btn-icon" style="color:var(--primary-color); margin-right: 10px;" title="Ver Lançamentos"><i class="fa-solid fa-list-ul"></i></a>
                             <a href="{{ url_for('establishments.edit', id=est.id) }}" class="btn-icon" style="color:var(--primary-color);" title="Editar"><i class="fa-solid fa-pen-to-square"></i></a>
                         </td>
                     </tr>

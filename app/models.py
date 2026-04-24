@@ -67,6 +67,9 @@ class Transacao(db.Model):
 
     # Campo de detalhamento longo
     observacoes = db.Column(db.Text, nullable=True)
+
+    # Controle de parcelamento (Ex: 1/5)
+    parcela = db.Column(db.String(20), nullable=True)
     
     estabelecimento = db.relationship('Estabelecimento', backref='transacoes', lazy=True)
     categoria = db.relationship('Categoria', backref='transacoes', lazy=True)

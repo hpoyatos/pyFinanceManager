@@ -45,7 +45,7 @@
                     {% for o in orcamentos %}
                     <tr>
                         <td>{{ o.categoria.nome }}</td>
-                        <td>R$ {{ "%.2f"|format(o.valor_previsto) }}</td>
+                        <td>{{ o.valor_previsto | currency }}</td>
                     </tr>
                     {% else %}
                     <tr>

@@ -32,7 +32,10 @@ def upload():
         return redirect(url_for('ofx.index'))
 
     try:
-        ofx = OfxParser.parse(file)
+        from io import StringIO
+        # Tenta ler como ISO-8859-1 (comum em bancos brasileiros)
+        raw_content = file.read().decode('iso-8859-1')
+        ofx = OfxParser.parse(StringIO(raw_content))
     except Exception as e:
         flash(f'Erro ao ler OFX: {str(e)}', 'danger')
         return redirect(url_for('ofx.index'))
@@ -71,9 +74,18 @@ def upload():
                     tipo_trans = 'transferencia_saida'
             # ------------------------------------------------
             
-            # Limpeza de sufixos de parcelamento padrão de faturas de cartão 
+            # Extração de sufixos de parcelamento padrão de faturas de cartão 
             # (ex: "LOJA - Parcela 2/2", "LOJA - parc 01/10", "LOJA - 1/3")
+            parcela_extrato = None
+            match_parcela = re.search(r'\s*-\s*(?:parcela|parc|)\s*(\d+/\d+).*$', descricao, flags=re.IGNORECASE)
+            if match_parcela:
+                parcela_extrato = match_parcela.group(1)
+            
+            # Limpeza da descrição para o banco
             descricao_limpa = re.sub(r'\s*-\s*(?:parcela|parc|)\s*\d+/\d+.*$', '', descricao, flags=re.IGNORECASE).strip()
+            
+            # Remove prefixo "Compra no débito - " para cadastrar estabelecimento limpo
+            descricao_limpa = re.sub(r'^Compra\s+no\s+d[é|e]bito\s*-\s*', '', descricao_limpa, flags=re.IGNORECASE).strip()
             
             # Buscar sinônimo para categorização (Pular se for transferência)
             est_id = None
@@ -134,13 +146,14 @@ def upload():
                     tipo=tipo_trans,
                     data=data_trans,
                     valor=valor_abs,
-                    descricao=descricao,
+                    descricao=descricao_limpa,
                     estabelecimento_id=est_id,
                     categoria_id=cat_id,
-                    conciliado=True,  # Veio do banco, então já ta conciliado
+                    conciliado=True,
                     ofx_fitid=fitid,
                     is_previsao=False,
-                    fatura_periodo=fatura_periodo
+                    fatura_periodo=fatura_periodo,
+                    parcela=parcela_extrato
                 )
                 db.session.add(nova)
                 registros_importados += 1

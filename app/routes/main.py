@@ -67,6 +67,7 @@ def index(periodo=None):
     from collections import defaultdict
     cat_agrupada = defaultdict(float)
     cat_cor = {}
+    cat_mapping = {}
     
     for t in transacoes_mes:
         # Tenta categoria direta, senão tenta herdar do estabelecimento
@@ -79,13 +80,16 @@ def index(periodo=None):
             cat_principal = cat.parent if cat.parent else cat
             cat_agrupada[cat_principal.nome] += float(t.valor)
             cat_cor[cat_principal.nome] = cat_principal.cor
+            cat_mapping[cat_principal.nome] = cat_principal.id
         else:
             cat_agrupada['Outros'] += float(t.valor)
             cat_cor['Outros'] = '#95a5a6' # Cinza
+            cat_mapping['Outros'] = 0
             
     cat_labels = list(cat_agrupada.keys())
     cat_values = [cat_agrupada[nome] for nome in cat_labels]
     cat_colors = [cat_cor[nome] for nome in cat_labels]
+    cat_ids = [cat_mapping[nome] for nome in cat_labels]
     
     # Orçamento vs Realizado Mês Atual
     total_orcado = Orcamento.query.filter_by(ano=ano_atual, mes=mes_atual).with_entities(func.sum(Orcamento.valor_previsto)).scalar() or 0.0
@@ -101,5 +105,6 @@ def index(periodo=None):
                            total_realizado=despesas_mes,
                            periodo_extenso=periodo_extenso,
                            prev_periodo=prev_periodo,
-                           next_periodo=next_periodo)
-
+                           next_periodo=next_periodo,
+                           periodo=periodo,
+                           cat_ids=cat_ids)

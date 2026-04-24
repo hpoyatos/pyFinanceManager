@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Lançamentos: {{ cat.nome }} | pyFinanceManager{% endblock %}
+{% block page_title %}Lançamentos em {{ cat.nome }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <!-- Header / Resumo -->
+    <div class="glass-card" style="grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; padding: 20px 30px;">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a href="{{ url_for('main.index', periodo=periodo) }}" class="btn-icon" title="Voltar ao Dashboard"><i class="fa-solid fa-arrow-left"></i></a>
+            <div>
+                <h2 style="margin: 0; font-size: 1.6rem; color: var(--text-color);">{{ cat.nome }}</h2>
+                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                    <span class="badge" style="background: {{ cat.cor }}22; color: {{ cat.cor }}; border: 1px solid {{ cat.cor }}44;">
+                        <i class="{{ cat.icone }}"></i> Categoria
+                    </span>
+                    <span class="badge" style="background: rgba(255,255,255,0.05); color: #aaa; border: 1px solid var(--glass-border);">
+                        <i class="fa-solid fa-calendar"></i> Período: {{ periodo }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: right;">
+            {% set total_valor = transacoes|sum(attribute='valor') %}
+            <small style="color: #888; display: block; margin-bottom: 5px;">Total Gasto nesta Categoria</small>
+            <span style="font-size: 1.8rem; font-weight: bold; color: var(--danger-color);">{{ total_valor | currency }}</span>
+            <small style="display: block; color: #666; font-size: 0.8rem;">{{ transacoes|length }} Lançamentos</small>
+        </div>
+    </div>
+
+    <!-- Lista de Transações -->
+    <div class="glass-card" style="grid-column: 1 / -1;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0;">Detalhamento de Gastos</h3>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Conta</th>
+                        <th>Descrição / Estabelecimento</th>
+                        <th>Categoria Específica</th>
+                        <th>Valor</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transacoes %}
+                    <tr>
+                        <td>{{ t.data.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <i class="{% if t.conta.tipo == 'cartao' %}fa-solid fa-credit-card{% else %}fa-solid fa-building-columns{% endif %}" style="color: #888; margin-right: 5px;"></i>
+                            {{ t.conta.nome }}
+                        </td>
+                        <td>
+                            <div style="font-weight: 500;">{{ t.descricao or (t.estabelecimento.nome if t.estabelecimento else 'S/ Descrição') }}</div>
+                            {% if t.estabelecimento %}
+                            <small style="color: #888; display: block;">{{ t.estabelecimento.nome }}</small>
+                            {% endif %}
+                            {% if t.parcela %}
+                            <span class="badge" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); font-size: 0.7rem;">{{ t.parcela }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if t.categoria %}
+                            <span class="badge" style="background: {{ t.categoria.cor }}; color: #fff;">
+                                <i class="{{ t.categoria.icone }}"></i> {{ t.categoria.nome }}
+                            </span>
+                            {% elif t.estabelecimento and t.estabelecimento.categoria %}
+                            <span class="badge" style="background: {{ t.estabelecimento.categoria.cor }}AA; color: #fff;" title="Herdada do Estabelecimento">
+                                <i class="{{ t.estabelecimento.categoria.icone }}"></i> {{ t.estabelecimento.categoria.nome }}
+                            </span>
+                            {% else %}
+                            <span style="color: #555;">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-danger" style="font-weight: bold;">
+                            - {{ t.valor | currency }}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('transactions.edit', id=t.id, next=request.full_path) }}" class="btn-icon" style="color: var(--primary-color);" title="Editar Lançamento"><i class="fa-solid fa-pen-to-square"></i></a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #888;">
+                            <i class="fa-solid fa-magnifying-glass" style="font-size: 2.5rem; display: block; margin-bottom: 15px; opacity: 0.3;"></i>
+                            Nenhum lançamento encontrado para esta categoria neste período.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

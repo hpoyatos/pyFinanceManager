@@ -112,6 +112,10 @@
                 <label>Competência/Fatura</label>
                 <input type="month" name="fatura_periodo" class="form-control" title="Opcional. Ex: Fatura de Dezembro">
             </div>
+            <div class="form-group" style="flex: 0.5; min-width: 80px;">
+                <label>Parcela</label>
+                <input type="text" name="parcela" class="form-control" placeholder="1/3">
+            </div>
             <div class="form-group" style="flex: 2; min-width: 200px;">
                 <label>Anexo (PDF, Imagens)</label>
                 <input type="file" name="anexo" class="form-control">
@@ -150,15 +154,17 @@
                         </td>
                         <td>{{ t.conta.nome }}</td>
                         <td>
-                            {{ t.descricao or '' }} 
+                            <div style="font-weight:bold;">{{ t.descricao or (t.estabelecimento.nome if t.estabelecimento else 'S/ Descrição') }}</div>
                             {% if t.estabelecimento %}
-                            <div><small style="color:#aaa;"><i class="fa-solid fa-store"></i> {{ t.estabelecimento.nome }}</small></div>
+                            <small style="color: #888;">{{ t.estabelecimento.nome }}</small>
                             {% endif %}
-                            {% if t.observacoes %}
-                            <i class="fa-solid fa-note-sticky" style="color:var(--primary-color); cursor:help;" title="{{ t.observacoes }}"></i>
+                            {% if t.parcela %}
+                            <span class="badge" style="background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); font-size: 0.75rem; vertical-align: middle; margin-left: 5px;">{{ t.parcela }}</span>
                             {% endif %}
                             {% if t.fatura_periodo %}
-                            <div><span class="badge" style="background:var(--primary-color); opacity:0.8; font-size:0.75rem; border:none; margin-top:3px;"><i class="fa-solid fa-calendar"></i> Fat: {{ t.fatura_periodo }}</span></div>
+                            <span class="badge" style="background: rgba(52, 152, 219, 0.1); color: #3498db; border: 1px solid rgba(52, 152, 219, 0.2); font-size: 0.7rem; display: block; margin-top: 4px; width: fit-content;">
+                                <i class="fa-solid fa-calendar-days"></i> {{ t.fatura_periodo }}
+                            </span>
                             {% endif %}
                         </td>
                         <td>
@@ -174,8 +180,8 @@
                             -
                             {% endif %}
                         </td>
-                        <td class="{% if t.tipo == 'despesa' %}text-danger{% else %}text-success{% endif %}" style="font-weight:bold;">
-                            {% if t.tipo == 'despesa' %}-{% else %}+{% endif %} R$ {{ "%.2f"|format(t.valor) }}
+                        <td class="{% if t.tipo == 'despesa' or t.tipo == 'transferencia_saida' %}text-danger{% else %}text-success{% endif %}" style="font-weight:bold;">
+                            {% if t.tipo == 'despesa' or t.tipo == 'transferencia_saida' %}- {% endif %}{{ t.valor | currency }}
                         </td>
                         <td>
                             {% if t.conciliado %}
@@ -194,7 +200,7 @@
                                 <i class="{{ ax.icone }}"></i>
                             </a>
                             {% endfor %}
-                            <a href="{{ url_for('transactions.edit', id=t.id) }}" class="btn-icon" style="color:var(--primary-color);" title="Editar"><i class="fa-solid fa-pen-to-square"></i></a>
+                            <a href="{{ url_for('transactions.edit', id=t.id, next=request.full_path) }}" class="btn-icon" style="color:var(--primary-color);" title="Editar"><i class="fa-solid fa-pen-to-square"></i></a>
                             <a href="{{ url_for('transactions.delete', id=t.id) }}" class="btn-icon" style="color:var(--danger-color);" onclick="return confirm('Excluir transação?')"><i class="fa-solid fa-trash"></i></a>
                         </td>
                     </tr>

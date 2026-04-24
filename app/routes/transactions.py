@@ -45,6 +45,16 @@ def add():
     is_previsao = 'is_previsao' in request.form
     fatura_periodo = request.form.get('fatura_periodo') or None
     observacoes = request.form.get('observacoes')
+    parcela = request.form.get('parcela') or None
+    
+    # Se não veio parcela mas tá na descrição, vamos caçar
+    import re
+    if not parcela and descricao:
+        match_parcela = re.search(r'\s*-\s*(?:parcela|parc|)\s*(\d+/\d+).*$', descricao, flags=re.IGNORECASE)
+        if match_parcela:
+            parcela = match_parcela.group(1)
+            # Limpar a descrição
+            descricao = re.sub(r'\s*-\s*(?:parcela|parc|)\s*\d+/\d+.*$', '', descricao, flags=re.IGNORECASE).strip()
     
     
     anexo_files = request.files.getlist('anexos')
@@ -92,12 +102,30 @@ def add():
                 estabelecimento_id=estabelecimento_id,
                 categoria_id=categoria_id,
                 is_previsao=is_previsao,
-                conciliado=False, # Manuais n sao automaticamente conciliaes ate OFX virem
-                anexo=anexo_data,
-                anexo_filename=anexo_filename,
-                fatura_periodo=fatura_periodo
+                conciliado=False,
+                fatura_periodo=fatura_periodo,
+                observacoes=observacoes,
+                parcela=parcela
             )
             db.session.add(nova_transacao)
+
+            # Handle attachments for the new transaction
+            for file in anexo_files:
+                if file and file.filename:
+                    filename = secure_filename(file.filename)
+                    anexo_data = file.read()
+                    
+                    # Identificar documento automaticamente
+                    icone, tipo_doc = identify_document(filename, anexo_data)
+                    
+                    novo_anexo = TransacaoAnexo(
+                        transacao=nova_transacao,
+                        anexo=anexo_data,
+                        filename=filename,
+                        tipo_documento=tipo_doc,
+                        icone=icone
+                    )
+                    db.session.add(novo_anexo)
             
         db.session.commit()
         flash('Lançamento adicionado!', 'success')
@@ -124,6 +152,8 @@ def delete(id):
 @bp.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
     transacao = Transacao.query.get_or_404(id)
+    next_url = request.args.get('next') or request.form.get('next')
+    
     if request.method == 'POST':
         transacao.conta_id = request.form.get('conta_id')
         transacao.tipo = request.form.get('tipo')
@@ -134,7 +164,8 @@ def edit(id):
         transacao.categoria_id = request.form.get('categoria_id') or None
         transacao.is_previsao = 'is_previsao' in request.form
         transacao.fatura_periodo = request.form.get('fatura_periodo') or None
-        transacao.observacoes = request.form.get('observacoes') or None
+        transacao.observacoes = request.form.get('observacoes')
+        transacao.parcela = request.form.get('parcela') or None
         
         # Salvar novos Anexos
         novos_anexos = request.files.getlist('anexos')
@@ -155,12 +186,12 @@ def edit(id):
                 
         db.session.commit()
         flash('Transação atualizada.', 'success')
-        return redirect(url_for('transactions.index'))
+        return redirect(next_url or url_for('transactions.index'))
         
     contas = Conta.query.all()
     categorias = Categoria.query.all()
     estabelecimentos = Estabelecimento.query.all()
-    return render_template('transactions/edit.html', t=transacao, contas=contas, categorias=categorias, estabelecimentos=estabelecimentos)
+    return render_template('transactions/edit.html', t=transacao, contas=contas, categorias=categorias, estabelecimentos=estabelecimentos, next_url=next_url)
 
 from flask import jsonify
 
@@ -196,7 +227,8 @@ def delete_anexo(id):
     db.session.delete(anexo)
     db.session.commit()
     flash('Anexo removido.', 'success')
-    return redirect(url_for('transactions.edit', id=transacao_id))
+    next_url = request.args.get('next')
+    return redirect(url_for('transactions.edit', id=transacao_id, next=next_url))
 
 import calendar
 from dateutil.relativedelta import relativedelta

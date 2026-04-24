@@ -36,4 +36,14 @@ def create_app(config_class=Config):
     from app.routes.budget import bp as budget_bp
     app.register_blueprint(budget_bp, url_prefix='/budget')
 
+    @app.template_filter('currency')
+    def currency_filter(value):
+        if value is None:
+            return "R$ 0,00"
+        neg = value < 0
+        # Formata o número absoluto com separador de milhar (,) e 2 decimais (.)
+        # Depois troca , -> . e . -> , para o padrão brasileiro
+        val_str = "{:,.2f}".format(abs(value)).replace(',', 'X').replace('.', ',').replace('X', '.')
+        return f"{'- ' if neg else ''}R$ {val_str}"
+
     return app

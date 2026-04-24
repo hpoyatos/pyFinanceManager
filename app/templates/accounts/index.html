@@ -29,7 +29,7 @@
                                 {{ conta.tipo|capitalize }}
                             </span>
                         </td>
-                        <td>R$ {{ "%.2f"|format(conta.saldo_inicial) }}</td>
+                        <td>{{ conta.saldo_inicial | currency }}</td>
                         <td>
                             <a href="{{ url_for('accounts.edit_conta', id=conta.id) }}" class="btn-icon" style="color:var(--primary-color);" title="Editar"><i class="fa-solid fa-pen-to-square"></i></a>
                         </td>

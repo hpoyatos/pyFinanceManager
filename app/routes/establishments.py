@@ -104,3 +104,10 @@ def edit(id):
     categorias = Categoria.query.all()
     outros_estabelecimentos = Estabelecimento.query.filter(Estabelecimento.id != id).order_by(Estabelecimento.nome).all()
     return render_template('establishments/edit.html', estab=estab, categorias=categorias, outros_estabelecimentos=outros_estabelecimentos)
+
+@bp.route('/<int:id>/transactions')
+def transactions_detail(id):
+    from app.models import Transacao
+    estab = Estabelecimento.query.get_or_404(id)
+    transacoes = Transacao.query.filter_by(estabelecimento_id=id).order_by(Transacao.data.desc()).all()
+    return render_template('establishments/transactions.html', estab=estab, transacoes=transacoes)

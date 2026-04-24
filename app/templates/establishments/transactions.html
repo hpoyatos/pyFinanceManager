@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Lançamentos: {{ estab.nome }} | pyFinanceManager{% endblock %}
+{% block page_title %}Lançamentos em {{ estab.nome }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <!-- Header / Resumo -->
+    <div class="glass-card" style="grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; padding: 20px 30px;">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a href="{{ url_for('establishments.index') }}" class="btn-icon" title="Voltar"><i class="fa-solid fa-arrow-left"></i></a>
+            <div>
+                <h2 style="margin: 0; font-size: 1.6rem; color: var(--text-color);">{{ estab.nome }}</h2>
+                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                    {% if estab.categoria %}
+                    <span class="badge" style="background: {{ estab.categoria.cor }}22; color: {{ estab.categoria.cor }}; border: 1px solid {{ estab.categoria.cor }}44;">
+                        <i class="{{ estab.categoria.icone }}"></i> {{ estab.categoria.nome }}
+                    </span>
+                    {% endif %}
+                    {% if estab.municipio %}
+                    <span class="badge" style="background: rgba(255,255,255,0.05); color: #aaa; border: 1px solid var(--glass-border);">
+                        <i class="fa-solid fa-location-dot"></i> {{ estab.municipio }} - {{ estab.estado }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: right;">
+            <small style="color: #888; display: block; margin-bottom: 5px;">Total de Lançamentos</small>
+            <span style="font-size: 1.8rem; font-weight: bold; color: var(--primary-color);">{{ transacoes|length }}</span>
+        </div>
+    </div>
+
+    <!-- Lista de Transações -->
+    <div class="glass-card" style="grid-column: 1 / -1;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0;">Histórico de Compras</h3>
+            <span style="font-size: 0.85rem; color: #888;">Ordenado do mais recente para o mais antigo</span>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Conta</th>
+                        <th>Descrição</th>
+                        <th>Categoria</th>
+                        <th>Valor</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transacoes %}
+                    <tr>
+                        <td>{{ t.data.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <i class="{% if t.conta.tipo == 'cartao' %}fa-solid fa-credit-card{% else %}fa-solid fa-building-columns{% endif %}" style="color: #888; margin-right: 5px;"></i>
+                            {{ t.conta.nome }}
+                        </td>
+                        <td>
+                            <div style="font-weight: 500;">{{ t.descricao or 'S/ Descrição' }}</div>
+                            {% if t.parcela %}
+                            <span class="badge" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); font-size: 0.7rem;">{{ t.parcela }}</span>
+                            {% endif %}
+                            {% if t.fatura_periodo %}
+                            <small style="color: #3498db; display: block; margin-top: 2px;">
+                                <i class="fa-solid fa-calendar-days"></i> {{ t.fatura_periodo }}
+                            </small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if t.categoria %}
+                            <span class="badge" style="background: {{ t.categoria.cor }}; color: #fff;">
+                                <i class="{{ t.categoria.icone }}"></i> {{ t.categoria.nome }}
+                            </span>
+                            {% elif estab.categoria %}
+                            <span class="badge" style="background: {{ estab.categoria.cor }}AA; color: #fff;" title="Herdada do Estabelecimento">
+                                <i class="{{ estab.categoria.icone }}"></i> {{ estab.categoria.nome }}
+                            </span>
+                            {% else %}
+                            <span style="color: #555;">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="{% if t.tipo == 'despesa' or t.tipo == 'transferencia_saida' %}text-danger{% else %}text-success{% endif %}" style="font-weight: bold;">
+                            {% if t.tipo == 'despesa' or t.tipo == 'transferencia_saida' %}- {% endif %}{{ t.valor | currency }}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('transactions.edit', id=t.id, next=request.full_path) }}" class="btn-icon" style="color: var(--primary-color);" title="Editar Lançamento"><i class="fa-solid fa-pen-to-square"></i></a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #888;">
+                            <i class="fa-solid fa-receipt" style="font-size: 2.5rem; display: block; margin-bottom: 15px; opacity: 0.3;"></i>
+                            Nenhuma transação encontrada para este estabelecimento.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
