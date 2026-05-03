@@ -23,11 +23,13 @@ jobs:
         # Só rodamos o build se houver mudanças no código ou no Dockerfile
         # Para otimizar, você poderia usar condicionais, mas o cache do Docker já ajuda.
         run: |
-          docker build -t pyfinancemanager:latest .
+          # Build normal (seu usuário já está no grupo docker)
+          docker build -t pyfinancemanager:latest .          
+          
+          # Import para o k3s usando o sudo configurado no visudo
           docker save pyfinancemanager:latest | sudo k3s ctr images import -
           
-          # Reinicia o deploy para garantir que a imagem nova seja carregada
-          # Ignora erro caso o deployment ainda não exista (primeiro deploy)
+          # Reinicia o deploy
           kubectl rollout restart deployment/pyfinancemanager-web -n app || true
         
       - name: Apply All Kubernetes Manifests
