@@ -6,8 +6,6 @@ __pycache__/
 # C extensions
 *.so
 
-k3s/
-
 # Distribution / packaging
 .Python
 build/
