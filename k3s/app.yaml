@@ -1,0 +1,42 @@
+# /srv/k3s/apps/pyFinanceManager/app.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pyfinancemanager-web
+  namespace: app
+  labels:
+    app: pyfinancemanager-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pyfinancemanager-web
+  template:
+    metadata:
+      labels:
+        app: pyfinancemanager-web
+    spec:
+      containers:
+      - name: web
+        image: pyfinancemanager:latest
+        imagePullPolicy: Never # Crucial para usar a imagem que você importou via 'docker save'
+        command: ["flask", "run", "--host=0.0.0.0", "--port=5000"]
+        ports:
+        - containerPort: 5000
+        envFrom:
+        - configMapRef:
+            name: pyfinance-config
+        - secretRef:
+            name: pyfinance-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pyfinancemanager-web-svc
+  namespace: app
+spec:
+  selector:
+    app: pyfinancemanager-web
+  ports:
+  - port: 5000
+    targetPort: 5000

@@ -1,0 +1,23 @@
+# /srv/k3s/infra/pyfinancemanager/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pyfinancemanager-ingress
+  namespace: app
+spec:
+  ingressClassName: traefik
+  tls:
+  - hosts:
+    - pyfinancemanager.lothlorien.local
+    secretName: lothlorien-tls
+  rules:
+  - host: pyfinancemanager.lothlorien.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: pyfinancemanager-web-svc
+            port:
+              number: 5000

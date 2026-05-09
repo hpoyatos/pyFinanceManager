@@ -3,4 +3,5 @@ from app import create_app, db
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # O host '0.0.0.0' permite que o Flask aceite conexões de fora do container
+    app.run(host='0.0.0.0', port=5000, debug=True)

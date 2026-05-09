@@ -1,0 +1,40 @@
+name: Deploy pyFinanceManager to K3s
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'app/**'
+      - 'run.py'
+      - 'requirements.txt'
+      - 'Dockerfile'
+      - '**.yaml'
+      - '**.yml'
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, Linux, X64, lothlorien]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and Update Image
+        # Só rodamos o build se houver mudanças no código ou no Dockerfile
+        # Para otimizar, você poderia usar condicionais, mas o cache do Docker já ajuda.
+        run: |
+          # Build via Docker (já funciona sem sudo)
+          docker build -t pyfinancemanager:latest .          
+          
+          # Import via CTR (agora funciona sem sudo por causa do comando acima)
+          docker save pyfinancemanager:latest | k3s ctr images import -
+          
+          # Restart do deploy
+          kubectl rollout restart deployment/pyfinancemanager-web -n app || true
+
+      - name: Apply All Kubernetes Manifests
+        run: |
+          # Procura e aplica todos os arquivos .yaml e .yml na raiz do projeto
+          # O kubectl é inteligente: se nada mudou no arquivo, ele apenas ignora (unchanged)
+          kubectl apply -f . --recursive --prune -l app=pyfinancemanager-web --all-namespaces=false -n app || \
+          find . -maxdepth 1 -name "*.yaml" -o -name "*.yml" | xargs -I {} kubectl apply -f {}
